@@ -1,74 +1,90 @@
-# QSO Cryptography Lab — Interception & Secure Messaging Simulator
+# QSO Quantum Cryptography Lab — QKD UI & Simulator
 
-An interactive web application designed to demonstrate the mechanics of **transmitting, receiving, and intercepting network messages**, highlighting the differences between unencrypted cleartext transmissions, basic classical substitution ciphers, and modern authenticated cryptographic protocols (AEAD / AES-256-GCM).
-
----
-
-## 🌟 Key Features
-
-### 1. 📡 Station Alice (Sender)
-- **Target Selection**: Send messages to **Bob** (the intended recipient), **Charlie** (a third party), or **Broadcast**.
-- **Cryptographic Suites**:
-  - **Plaintext (No Encryption)**: Shows cleartext vulnerability over an untrusted channel.
-  - **Caesar Cipher**: Symmetric substitution with customizable shift key (1–25).
-  - **XOR Stream Cipher**: Symmetric byte-wise XOR returning hexadecimal wire data.
-  - **AES-256-GCM**: Modern authenticated encryption using Web Crypto API (`window.crypto.subtle`) with random 96-bit IVs and AEAD integrity tags.
-- **Integrity Signatures**: Option to attach a SHA-256 checksum in the packet header.
-- **Wire Preview**: Live preview showing the exact byte/text stream traveling through the physical wire.
-
-### 2. 🕵️ Station Eve (Wiretap & Interceptor Console)
-Eve represents an unauthorized node situated on the network channel.
-- **Interception Modes**:
-  - **Passive Sniffer (Promiscuous)**: Silently logs and inspects copies of all packets crossing the wire while allowing them to continue to Bob.
-  - **Active MitM (Trap & Tamper)**: Traps packets in transit at the wiretap junction, halting the transmission.
-  - **Bypass**: Turns off the wiretap tap.
-- **Eve's Decryption & Cryptanalysis Workbench**:
-  - **Cleartext Leaks**: Immediately reads unprotected messages.
-  - **Caesar Frequency Analysis**: Automatically computes all 25 shift permutations and uses English letter/word frequency heuristics to score and crack the shift key.
-  - **XOR Dictionary Attack**: Tests common passwords against the ciphertext.
-  - **AES-256-GCM**: Demonstrates cipher resistance against brute-force inspection.
-- **Man-in-the-Middle (MitM) Tamper Suite**:
-  - **Alter Payload**: Modify the message in transit before forwarding (e.g. changing coordinates or instructions).
-  - **Redirect Destination**: Reroute packets addressed to Bob to someone else.
-  - **Forge Checksums**: Option to recalculate the SHA-256 checksum to evade naive hash verification.
-  - **Drop Packet (DoS)**: Discards the message entirely so the recipient never receives it.
-- **Spoofed Sender Injection**: Eve can craft and transmit forged packets onto the wire claiming to originate from Alice.
-
-### 3. 📥 Station Bob (Intended Recipient)
-- **Local Credentials**: Configure Bob's shared key for decrypting incoming AES or XOR messages.
-- **Integrity & Authenticity Verifier**:
-  - Automatically calculates SHA-256 hashes of incoming payloads.
-  - Alerts the recipient if a packet was modified in transit:
-    - `✅ INTEGRITY VERIFIED`: Untampered message.
-    - `🚨 INTEGRITY BREACH`: Checksum mismatch detected!
-    - `❌ DECRYPTION FAILED`: Authenticated cipher tag mismatch (e.g., tampered AES payload).
-- **Two-Way Communication**: Send acknowledgments and replies back to Alice (which Eve can also intercept).
-
-### 4. ⚡ Visual Wire & Audio Feedback
-- Real-time animated packet token traveling across an SVG network pipeline.
-- Procedural audio sound effects synthesized using the **Web Audio API** (transmission chirps, wiretap intercept sirens, delivery chimes, and tamper alarms).
+An interactive user interface demonstrating **Quantum Key Distribution (BB84)**, **secure message transmission**, and **wiretap interception** across quantum and classical channels.
 
 ---
 
-## 🚀 How to Run
+## 🎯 Designed for Custom Quantum Logic
 
-### Option 1: Using the Included Python Server
+All quantum mechanics and simulation routines are decoupled into a dedicated `QuantumLogic` object at the top of [`app.js`](file:///Users/rishu/Github/qso_cryptography_website/app.js). 
+
+You can directly replace these hook methods with your own quantum algorithms, simulation backend, or quantum hardware API:
+
+```javascript
+// Located at the top of app.js:
+const QuantumLogic = {
+  prepareQubits(count) {
+    // Return array of qubits with basis ('+' or '×') and polarization states
+  },
+
+  eveIntercept(qubits, basisStrategy) {
+    // Intercept-Resend attack: measure photons and return collapsed states
+  },
+
+  bobMeasure(qubits) {
+    // Measure incoming photons with Bob's basis choices
+  },
+
+  siftAndReconcile(measuredQubits) {
+    // Compare bases, discard mismatches, calculate QBER, and return certified key
+  },
+
+  encryptOtp(plaintext, qkdKey) {
+    // One-Time Pad encryption
+  },
+
+  decryptOtp(hexCiphertext, qkdKey) {
+    // One-Time Pad decryption
+  }
+};
+```
+
+---
+
+## 🖥️ UI Layout & Stations
+
+### 1. Dual Transmission Wire Visualizer
+- **⚡ Quantum Optical Fiber (Top Wire)**: Visualizes single photons with polarization states (`|H⟩`, `|V⟩`, `|↗⟩`, `|↘⟩`) traveling from Alice through Eve's quantum tap to Bob's detectors.
+- **📡 Classical Public Channel (Bottom Wire)**: Visualizes public basis reconciliation packets and OTP-encrypted messages.
+
+### 2. 👩‍💻 Station Alice (Transmitter)
+- **Step 1: QKD Exchange**: Select photon count (12, 16, 24) and click **"Emit Photons & Run QKD Exchange"**. Displays Alice's certified QKD key.
+- **Step 2: Message Transmission**: Compose a message, select recipient (Bob), and transmit the QKD-encrypted payload.
+- **Sent Log**: History of transmitted packets.
+
+### 3. 🕵️ Station Eve (Wiretap & Interceptor)
+- **Quantum Channel Wiretap**:
+  - Toggle the quantum fiber intercept on/off.
+  - Choose Eve's measurement basis strategy (Random, Rectilinear `+`, or Diagonal `×`).
+  - Displays Eve's captured qubit measurements and state collapse logs.
+- **Classical Channel Interception**:
+  - Switch between **Passive Sniffer** (copies passing messages) and **Active MitM** (pauses messages in transit).
+  - Trapped Message Panel (specifically highlights that the message is addressed to Bob, not Eve).
+  - **MitM Tamper Suite**: Allows Eve to edit the ciphertext bytes before forwarding or drop the packet entirely.
+
+### 4. 👨‍💻 Station Bob (Receiver)
+- **QBER Error Gauge**: Real-time visual progress bar showing the Quantum Bit Error Rate against the 11% security threshold.
+- **Certified Key Status**: Displays Bob's matching QKD key or an alert if eavesdropping forced a key abort.
+- **Inbox**: Displays received messages, decrypts with the QKD key, and flags tampering if bytes were altered in transit.
+- **Quick Reply**: Bob can reply to Alice using the certified QKD key.
+
+### 5. 🔬 BB84 Sifting Matrix Modal
+Click **"🔬 View BB84 Sifting Matrix"** to open a full photon-by-photon audit table:
+- Alice's bit and basis
+- Eve's measurement and collapsed state
+- Bob's detector basis and bit
+- Basis match result (`✓` / `✗`)
+- Sifted key bits and QBER error flags
+
+---
+
+## 🚀 Running Locally
+
+The local server is running at:
+**[http://localhost:8080](http://localhost:8080)**
+
+To run or restart:
 ```bash
 python3 serve.py
 ```
-Open your browser and navigate to:
-**[http://localhost:8080](http://localhost:8080)**
-
-### Option 2: Direct File Open
-You can also open [index.html](file:///Users/rishu/Github/qso_cryptography_website/index.html) directly in any modern web browser.
-
----
-
-## 🧪 Guided Scenarios to Try
-
-Use the **"Presets / Scenarios"** dropdown in the top header to quickly test key concepts:
-1. **Plaintext Leak**: Send an unencrypted message and observe how Eve immediately reads confidential cleartext.
-2. **Caesar Substitution & Brute-Force**: Send a shifted message; Eve's workbench will automatically crack the shift key using frequency analysis.
-3. **Active MitM Tampering**: Alice sends an order with a checksum; Eve holds it, modifies the payload to an ambush location, and forwards it. Bob's console flags a major integrity alarm!
-4. **Modern AES-256-GCM**: Send an authenticated message; Eve sees random noise. If Eve modifies even a single character, AES-GCM's AEAD tag rejects the message at Bob's station.
-5. **Spoofed Sender Injection**: Eve injects a forged message pretending to be Alice.
+Or open [index.html](file:///Users/rishu/Github/qso_cryptography_website/index.html) directly in any browser.
