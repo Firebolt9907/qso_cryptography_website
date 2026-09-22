@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QSO Quantum Lab — QKD (BB84) &amp; Interception Simulator</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Top Header & Global Controls -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="9"></circle>
+            <path d="M12 3a9 9 0 0 1 9 9"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="12" y1="3" x2="12" y2="21"></line>
+          </svg>
+        </div>
+        <div>
+          <h1>QSO QUANTUM CRYPTOGRAPHY LAB</h1>
+          <p class="subtitle">Quantum Key Distribution (BB84 Protocol) &amp; Eavesdropping Interception</p>
+        </div>
+      </div>
+
+      <div class="header-controls">
+        <!-- Guided Scenarios -->
+        <div class="control-group">
+          <label for="scenarioSelect">QKD Scenarios:</label>
+          <select id="scenarioSelect" class="select-input">
+            <option value="">-- Select a QKD Scenario --</option>
+            <option value="clean_qkd">1. Clean QKD (No Eve): 0% QBER &rarr; Secure Key &rarr; Message Sent</option>
+            <option value="eve_quantum_tap">2. Eve Quantum Interception: State Collapse &rarr; High QBER &rarr; Abort!</option>
+            <option value="eve_classical_sniff">3. Eve Intercepts Message: Safe QKD &rarr; OTP Uncrackable by Eve</option>
+            <option value="eve_mitm_tamper">4. Eve Tampering: Altered Message in Transit &rarr; Bob Detects Tamper</option>
+          </select>
+        </div>
+
+        <!-- Animation Speed -->
+        <div class="control-group">
+          <label for="speedSelect">Photon Speed:</label>
+          <select id="speedSelect" class="select-input">
+            <option value="1600">Slow-Mo (1.6s)</option>
+            <option value="900" selected>Normal (0.9s)</option>
+            <option value="400">Fast (0.4s)</option>
+            <option value="50">Instant</option>
+          </select>
+        </div>
+
+        <!-- Audio Toggle -->
+        <button id="soundToggleBtn" class="btn btn-ghost" title="Toggle Sound FX">
+          <span id="soundIcon">🔊</span>
+          <span id="soundLabel">Audio FX</span>
+        </button>
+
+        <!-- Reset State -->
+        <button id="resetAllBtn" class="btn btn-ghost" title="Reset everything">
+          <span>🔄</span> Reset
+        </button>
+      </div>
+    </header>
+
+    <!-- Visual Dual-Channel Transmission Section: Quantum Optical Fiber & Classical Channel -->
+    <section class="wire-visualizer-section">
+      <div class="channel-tabs">
+        <span class="channel-badge quantum-badge">⚡ QUANTUM OPTICAL FIBER (Qubits / Photons)</span>
+        <span class="wire-status-pill" id="wireStatusPill">QUANTUM CHANNEL: Ready for Photon Transmission</span>
+        <span class="channel-badge classical-badge">📡 PUBLIC CLASSICAL CHANNEL (Sifting &amp; Messages)</span>
+      </div>
+
+      <div class="dual-wire-track-container" id="wireTrack">
+        <!-- Quantum Optical Fiber Wire -->
+        <div class="wire-lane quantum-lane">
+          <div class="lane-label">QUANTUM CHANNEL (Single Photons)</div>
+          <svg class="wire-svg" viewBox="0 0 1000 45" preserveAspectRatio="none">
+            <line x1="40" y1="22" x2="500" y2="22" class="quantum-fiber fiber-seg-1" />
+            <line x1="500" y1="22" x2="960" y2="22" class="quantum-fiber fiber-seg-2" />
+            
+            <circle cx="40" cy="22" r="8" class="q-joint q-joint-alice" />
+            <circle cx="500" cy="22" r="11" class="q-joint q-joint-eve" />
+            <circle cx="960" cy="22" r="8" class="q-joint q-joint-bob" />
+          </svg>
+
+          <!-- Animated Traveling Quantum Photon -->
+          <div class="flying-quantum-photon hidden" id="flyingPhoton">
+            <div class="photon-orb">
+              <span class="photon-spin" id="flyingPhotonSymbol">|H⟩</span>
+            </div>
+            <span class="photon-tag" id="flyingPhotonTag">&lambda;01</span>
+          </div>
+
+          <!-- Eve's Quantum Tap Aura -->
+          <div class="eve-quantum-tap-marker" id="eveQuantumTapMarker">
+            <div class="tap-ring"></div>
+            <span class="tap-caption">EVE QUANTUM TAP</span>
+          </div>
+        </div>
+
+        <!-- Classical Message Wire -->
+        <div class="wire-lane classical-lane">
+          <div class="lane-label">CLASSICAL PUBLIC CHANNEL (Sifting &amp; Encrypted Messages)</div>
+          <svg class="wire-svg" viewBox="0 0 1000 45" preserveAspectRatio="none">
+            <line x1="40" y1="22" x2="500" y2="22" class="classical-wire" />
+            <line x1="500" y1="22" x2="960" y2="22" class="classical-wire" />
+
+            <circle cx="40" cy="22" r="6" class="c-joint" />
+            <circle cx="500" cy="22" r="8" class="c-joint" />
+            <circle cx="960" cy="22" r="6" class="c-joint" />
+          </svg>
+
+          <!-- Animated Traveling Classical Packet -->
+          <div class="flying-packet hidden" id="flyingPacket">
+            <div class="packet-chip">
+              <span class="packet-icon">✉️</span>
+              <span class="packet-tag" id="flyingPacketTag">QKD-MSG</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Role View Switcher -->
+    <div class="view-mode-tabs">
+      <button class="tab-btn active" data-target="all">Simultaneous Split View (Alice / Eve / Bob)</button>
+      <button class="tab-btn" data-target="panel-alice">Alice Only (Transmitter)</button>
+      <button class="tab-btn" data-target="panel-eve">Eve Only (Quantum &amp; Classical Wiretap)</button>
+      <button class="tab-btn" data-target="panel-bob">Bob Only (Receiver)</button>
+      <button class="tab-btn" id="openMatrixBtn" data-target="matrix">🔬 View BB84 Sifting Matrix</button>
+    </div>
+
+    <!-- Main Workspace Grid: Alice, Eve, Bob -->
+    <main class="grid-layout" id="mainGrid">
+      
+      <!-- ============================================================= -->
+      <!-- STATION 1: ALICE (QUANTUM TRANSMITTER & SENDER) -->
+      <!-- ============================================================= -->
+      <section class="station-card station-alice" id="panel-alice">
+        <div class="card-header">
+          <div class="station-identity">
+            <div class="role-badge alice-badge">ALICE</div>
+            <div>
+              <h2>Station ALICE</h2>
+              <span class="callsign">PHOTON EMITTER &amp; SECURE SENDER</span>
+            </div>
+          </div>
+          <span class="station-status-tag online">● ONLINE</span>
+        </div>
+
+        <div class="card-body">
+          <!-- Step 1: QKD Photon Generation -->
+          <div class="step-container">
+            <div class="step-header">
+              <span class="step-number">STEP 1</span>
+              <span class="step-title">BB84 Quantum Key Distribution</span>
+            </div>
+
+            <div class="form-row">
+              <label>Number of Photons to Emit:</label>
+              <div class="btn-group-toggle">
+                <button class="btn btn-secondary btn-sm photon-count-btn active" data-count="12">12 Photons</button>
+                <button class="btn btn-secondary btn-sm photon-count-btn" data-count="16">16 Photons</button>
+                <button class="btn btn-secondary btn-sm photon-count-btn" data-count="24">24 Photons</button>
+              </div>
+              <small class="helper-text">Alice prepares random bits (0 or 1) in random polarization bases (+ or &times;).</small>
+            </div>
+
+            <!-- Action: Run QKD Key Exchange -->
+            <button id="runQkdBtn" class="btn btn-quantum full-width">
+              <span>⚛️</span>
+              <span>Emit Photons &amp; Run QKD Exchange</span>
+            </button>
+
+            <!-- Alice's Established QKD Key Display -->
+            <div class="qkd-key-display-box">
+              <div class="key-header">
+                <span>Alice's Established QKD Key:</span>
+                <span id="aliceKeyStatusBadge" class="mono-badge">NO KEY YET</span>
+              </div>
+              <div id="aliceKeyString" class="mono-text key-box">-- NONE --</div>
+              <small class="helper-text" id="aliceKeyHelper">Run QKD exchange to negotiate a One-Time Pad key.</small>
+            </div>
+          </div>
+
+          <!-- Step 2: Encrypted Messaging with QKD Key (One-Time Pad) -->
+          <div class="step-container">
+            <div class="step-header">
+              <span class="step-number">STEP 2</span>
+              <span class="step-title">Send Message Encrypted via QKD Key</span>
+            </div>
+
+            <div class="form-row">
+              <label for="aliceRecipient">Target Recipient:</label>
+              <select id="aliceRecipient" class="select-input full-width">
+                <option value="Bob" selected>Station BOB (Intended Recipient)</option>
+                <option value="Charlie">Station CHARLIE (Third Party)</option>
+                <option value="Broadcast">BROADCAST (All Stations)</option>
+              </select>
+            </div>
+
+            <div class="form-row">
+              <div class="label-with-actions">
+                <label for="aliceMessageText">Message Payload:</label>
+                <div class="quick-samples">
+                  <button class="badge-action" data-sample="QSO: Meet at grid 37.77, -122.41 at 2100 UTC.">Ops Plan</button>
+                  <button class="badge-action" data-sample="Authorization Token: QUANTUM-VERIFIED-771">Auth Code</button>
+                </div>
+              </div>
+              <textarea id="aliceMessageText" rows="2" class="text-input" placeholder="Type message to encrypt with QKD key...">QSO: Meet at grid 37.77, -122.41 at 2100 UTC.</textarea>
+            </div>
+
+            <div class="encryption-method-pill">
+              <span>🔐 Encryption Mode:</span>
+              <strong id="aliceEncModeText">One-Time Pad (XOR with QKD Key)</strong>
+            </div>
+
+            <div class="action-row" style="margin-top: 0.5rem;">
+              <button id="transmitMessageBtn" class="btn btn-primary btn-transmit" disabled>
+                <span>📡</span>
+                <span>Send Encrypted Message to Bob</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Alice Sent Log -->
+          <div class="history-container">
+            <div class="history-header">
+              <span>Alice Transmission Log</span>
+              <span id="aliceSentCount" class="counter-badge">0 sent</span>
+            </div>
+            <div class="history-list" id="aliceSentList">
+              <div class="empty-state">No messages transmitted yet.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================= -->
+      <!-- STATION 2: EVE (QUANTUM WIRETAP & MESSAGE INTERCEPTOR) -->
+      <!-- ============================================================= -->
+      <section class="station-card station-eve" id="panel-eve">
+        <div class="card-header">
+          <div class="station-identity">
+            <div class="role-badge eve-badge">EVE</div>
+            <div>
+              <h2>Station EVE</h2>
+              <span class="callsign">QUANTUM WIRETAP // UNINTENDED OBSERVER</span>
+            </div>
+          </div>
+          <span class="station-status-tag spying" id="eveStatusTag">● WIRETAP ACTIVE</span>
+        </div>
+
+        <div class="card-body">
+          <!-- Quantum Channel Tap Controls -->
+          <div class="step-container">
+            <div class="step-header">
+              <span class="step-number">SECTION A</span>
+              <span class="step-title">Quantum Channel Wiretap (Qubit Interception)</span>
+            </div>
+
+            <div class="form-row">
+              <label class="custom-checkbox">
+                <input type="checkbox" id="eveQuantumTapToggle" checked>
+                <span class="checkbox-mark"></span>
+                <strong>Intercept &amp; Measure Photons on Quantum Fiber</strong>
+              </label>
+              <small class="helper-text" style="margin-left: 26px;">
+                <strong>Intercept-Resend Attack:</strong> Eve intercepts each photon, measures it in a basis, and forwards a newly prepared photon.
+              </small>
+            </div>
+
+            <div class="form-row" id="eveBasisStrategyRow">
+              <label for="eveBasisStrategy">Eve's Quantum Measurement Basis:</label>
+              <select id="eveBasisStrategy" class="select-input full-width">
+                <option value="random" selected>Random Guess (+ or &times; 50/50)</option>
+                <option value="rectilinear">Fixed Rectilinear (+ Basis Only)</option>
+                <option value="diagonal">Fixed Diagonal (&times; Basis Only)</option>
+              </select>
+              <small class="helper-text">
+                ⚠️ <strong>Quantum Principle:</strong> Because Eve doesn't know Alice's basis in advance, measuring in the wrong basis collapses the quantum state, introducing &sim;25% QBER!
+              </small>
+            </div>
+
+            <!-- Eve's Intercepted Qubits Summary -->
+            <div class="qkd-key-display-box">
+              <div class="key-header">
+                <span>Eve's Stolen Measurement Log:</span>
+                <span id="eveQubitCount" class="mono-badge">0 captured</span>
+              </div>
+              <div id="eveQubitLog" class="mono-text key-box" style="color: #fda4af;">-- No quantum tap data --</div>
+              <small class="helper-text" id="eveQubitHelper">Eve's measurements will appear here during QKD.</small>
+            </div>
+          </div>
+
+          <!-- Classical Message Interception Controls -->
+          <div class="step-container">
+            <div class="step-header">
+              <span class="step-number">SECTION B</span>
+              <span class="step-title">Classical Message Interception (Not Addressed to Eve)</span>
+            </div>
+
+            <div class="form-row">
+              <label>Message Intercept Mode:</label>
+              <div class="radio-cards">
+                <label class="radio-card">
+                  <input type="radio" name="interceptMode" value="passive" checked>
+                  <div class="radio-card-content">
+                    <div class="card-title">👁️ Passive Sniffer</div>
+                    <div class="card-desc">Copies passing message addressed to Bob. Message continues.</div>
+                  </div>
+                </label>
+
+                <label class="radio-card">
+                  <input type="radio" name="interceptMode" value="active">
+                  <div class="radio-card-content">
+                    <div class="card-title">🛑 Active MitM (Trap &amp; Tamper)</div>
+                    <div class="card-desc">Pauses message in transit. Allows inspecting ciphertext, tampering payload, or dropping!</div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- Active Trapped Message Panel -->
+            <div class="trapped-packet-panel hidden" id="trappedPacketPanel">
+              <div class="trapped-banner">
+                <span class="blinking-siren">🚨</span>
+                <div>
+                  <strong>MESSAGE INTERCEPTED IN TRANSIT!</strong>
+                  <p>Addressed to <span id="trappedRecipientBadge" class="mono-badge">BOB</span> (Not meant for Eve).</p>
+                </div>
+              </div>
+
+              <div class="packet-inspector">
+                <div class="inspector-meta-grid">
+                  <div><strong>Packet ID:</strong> <span id="trapPktId" class="mono-text">-</span></div>
+                  <div><strong>From:</strong> <span id="trapPktSender" class="mono-text">-</span></div>
+                  <div><strong>To:</strong> <span id="trapPktRecipient" class="mono-text">-</span></div>
+                  <div><strong>Cipher:</strong> <span class="mono-badge pill-success">QKD ONE-TIME PAD</span></div>
+                </div>
+
+                <div class="form-row">
+                  <label>Raw Intercepted Ciphertext (Hex / Bits):</label>
+                  <div id="trapRawPayload" class="mono-display mono-text break-all">-</div>
+                </div>
+
+                <!-- Eve's Cryptanalysis of QKD OTP -->
+                <div class="eve-cryptanalysis-box">
+                  <div class="box-header-small">
+                    <span>🕵️ Eve's Decryption Workbench</span>
+                    <span id="eveDecipherStatus" class="mono-badge pill-danger">OTP UNBREAKABLE</span>
+                  </div>
+                  <div id="evePlaintextResultBox" class="analysis-result-box">
+                    <div class="analysis-match-fail">
+                      <strong>🛡️ Information-Theoretic Security!</strong><br>
+                      <span>This message was encrypted using a QKD One-Time Pad. Without the sifted quantum key, every plaintext is equally likely. Even with infinite computing power, Eve cannot decrypt it.</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Tampering Controls -->
+                <div class="tamper-box">
+                  <div class="box-header-small">
+                    <span>✂️ MitM Tamper Suite</span>
+                    <span class="tag-alert">Active Attack</span>
+                  </div>
+
+                  <div class="form-row">
+                    <label for="tamperPayloadInput">Tamper Ciphertext Bytes (Bit-Flip / Alter):</label>
+                    <input type="text" id="tamperPayloadInput" class="text-input" placeholder="Modify hex payload...">
+                  </div>
+
+                  <div class="trapped-actions">
+                    <button id="forwardOriginalBtn" class="btn btn-secondary">
+                      <span>➡️</span> Forward Unaltered
+                    </button>
+                    <button id="tamperAndForwardBtn" class="btn btn-warning">
+                      <span>⚡</span> Tamper &amp; Forward to Bob
+                    </button>
+                    <button id="dropPacketBtn" class="btn btn-danger">
+                      <span>🗑️</span> Drop Message (DoS)
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Eve's Intercept Feed -->
+          <div class="history-container">
+            <div class="history-header">
+              <span>Eve's Intercepted Messages</span>
+              <span id="eveInterceptCount" class="counter-badge">0 captured</span>
+            </div>
+            <div class="history-list" id="eveInterceptList">
+              <div class="empty-state">No messages intercepted yet.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================= -->
+      <!-- STATION 3: BOB (QUANTUM DETECTOR & RECIPIENT) -->
+      <!-- ============================================================= -->
+      <section class="station-card station-bob" id="panel-bob">
+        <div class="card-header">
+          <div class="station-identity">
+            <div class="role-badge bob-badge">BOB</div>
+            <div>
+              <h2>Station BOB</h2>
+              <span class="callsign">PHOTON DETECTOR &amp; INTENDED RECIPIENT</span>
+            </div>
+          </div>
+          <span class="station-status-tag listening">● LISTENING</span>
+        </div>
+
+        <div class="card-body">
+          <!-- Step 1: Bob's QKD Detection & QBER Meter -->
+          <div class="step-container">
+            <div class="step-header">
+              <span class="step-number">STEP 1</span>
+              <span class="step-title">Single-Photon Detectors &amp; QBER Verification</span>
+            </div>
+
+            <!-- QBER Gauge Display -->
+            <div class="qber-meter-box">
+              <div class="qber-title-row">
+                <span>Quantum Bit Error Rate (QBER):</span>
+                <span id="qberValueBadge" class="mono-badge">0.0%</span>
+              </div>
+
+              <div class="qber-progress-bar">
+                <div class="qber-threshold-marker" title="Security Threshold (11%)">
+                  <span class="threshold-label">11% Max</span>
+                </div>
+                <div class="qber-bar-fill" id="qberBarFill" style="width: 0%;"></div>
+              </div>
+
+              <!-- Security Verdict Banner -->
+              <div id="qkdVerdictBanner" class="qkd-verdict-banner pending">
+                <span>Waiting for QKD photon exchange...</span>
+              </div>
+            </div>
+
+            <!-- Bob's Sifted QKD Key Display -->
+            <div class="qkd-key-display-box">
+              <div class="key-header">
+                <span>Bob's Verified QKD Key:</span>
+                <span id="bobKeyStatusBadge" class="mono-badge">NO KEY YET</span>
+              </div>
+              <div id="bobKeyString" class="mono-text key-box">-- NONE --</div>
+              <small class="helper-text" id="bobKeyHelper">Will match Alice's key if no eavesdropping occurred.</small>
+            </div>
+          </div>
+
+          <!-- Step 2: Bob's Inbox for Received Messages -->
+          <div class="step-container">
+            <div class="step-header">
+              <span class="step-number">STEP 2</span>
+              <span class="step-title">Bob's Decrypted Messages Inbox</span>
+            </div>
+
+            <div class="inbox-list" id="bobInboxList">
+              <div class="empty-state">No messages received yet.</div>
+            </div>
+          </div>
+
+          <!-- Bob Quick Reply Station -->
+          <div class="reply-section">
+            <label class="section-subheading">Reply back to Alice with QKD Encryption:</label>
+            <div class="reply-input-row">
+              <input type="text" id="bobReplyText" class="text-input" placeholder="Type acknowledgment..." value="Copy that, Alice! Quantum key verified, message received loud and clear.">
+              <button id="bobReplyBtn" class="btn btn-primary" disabled>
+                <span>↩️</span> Reply to Alice
+              </button>
+            </div>
+            <small class="helper-text">Uses the established QKD key to encrypt the return message.</small>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- BB84 Reconciliation Matrix Modal -->
+    <div id="matrixModal" class="modal-backdrop hidden">
+      <div class="modal-content modal-wide">
+        <div class="modal-header">
+          <h3>🔬 BB84 Quantum Key Distribution Matrix &amp; Photon Audit Trail</h3>
+          <button id="closeMatrixBtn" class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p class="helper-text">
+            Below is the full quantum photon transmission record: Alice's bits and bases, Eve's intercept measurements (if tapped), Bob's detector bases, basis sifting results, and QBER error checks.
+          </p>
+          <div class="table-container">
+            <table class="qkd-table" id="qkdMatrixTable">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Alice Bit</th>
+                  <th>Alice Basis</th>
+                  <th>Photon State</th>
+                  <th class="col-eve">Eve Basis</th>
+                  <th class="col-eve">Eve Measured</th>
+                  <th>Bob Basis</th>
+                  <th>Bob Measured</th>
+                  <th>Bases Match?</th>
+                  <th>Sifted Key Bit</th>
+                  <th>QBER Error?</th>
+                </tr>
+              </thead>
+              <tbody id="qkdMatrixBody">
+                <tr><td colspan="11" class="text-center">No QKD exchange performed yet. Click "Emit Photons &amp; Run QKD Exchange" to generate data.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Detailed Packet Modal -->
+    <div id="packetModal" class="modal-backdrop hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="modalTitle">Message Inspection</h3>
+          <button id="closeModalBtn" class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body" id="modalBody"></div>
+      </div>
+    </div>
+
+    <!-- Educational Footer on QKD Principles -->
+    <footer class="app-footer">
+      <div class="crypto-concepts-strip">
+        <div class="concept-item">
+          <strong>Heisenberg's Uncertainty Principle:</strong>
+          <span>Measuring an unknown quantum state irreversibly collapses it. Eve cannot measure photons without altering their polarization.</span>
+        </div>
+        <div class="concept-item">
+          <strong>No-Cloning Theorem:</strong>
+          <span>It is impossible to make an exact copy of an unknown quantum state. Eve cannot duplicate Alice's photons to measure later.</span>
+        </div>
+        <div class="concept-item">
+          <strong>QBER &amp; Perfect Secrecy:</strong>
+          <span>Comparing a sample of sifted bits reveals eavesdropping (QBER &gt; 11%). Once verified, One-Time Pad encryption guarantees unconditional security.</span>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
